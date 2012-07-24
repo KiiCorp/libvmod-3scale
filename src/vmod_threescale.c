@@ -212,7 +212,7 @@ void* send_request_thread(void* data) {
   struct request *req = (struct request *)data; 
   int http_response_code;
 
-  char* buffer = send_request(req,&http_response_code);
+  char* buffer = send_request(req, &http_response_code);
 
   if (buffer!=NULL) free(buffer);
   if (req->host!=NULL) free(req->host);
@@ -294,7 +294,8 @@ int vmod_send_get_request(struct sess *sp, const char* host, const char* port, c
   req->path = strdup(path);
   req->header = strdup(header);
   req->port = porti;
-	req->http_verb = HTTP_GET;
+  req->http_verb = HTTP_GET;
+  req->body = NULL;
 
   int http_response_code;
   char* http_body = send_request(req,&http_response_code);
@@ -322,7 +323,8 @@ const char* vmod_send_get_request_body(struct sess *sp, const char* host, const 
   req->path = strdup(path);
   req->header = strdup(header);
   req->port = porti;
-	req->http_verb = HTTP_GET;
+  req->http_verb = HTTP_GET;
+  req->body = NULL;
 
   int http_response_code;
   char* http_body = send_request(req, &http_response_code);
@@ -330,8 +332,9 @@ const char* vmod_send_get_request_body(struct sess *sp, const char* host, const 
   if (req->host!=NULL) free(req->host);
   if (req->path!=NULL) free(req->path);
   if (req->header!=NULL) free(req->header);
+  if (req->body!=NULL) free(req->body);
   if (req!=NULL) free(req);
-
+  
   return http_body;
 
 }
@@ -351,8 +354,9 @@ int vmod_send_get_request_threaded(struct sess *sp, const char* host, const char
   req->host = strdup(host);
   req->path = strdup(path);
   if (header!=NULL) req->header = strdup(header);
-  req->port = porti;
-	req->http_verb = HTTP_GET;
+  req->port = porti; 
+  req->http_verb = HTTP_GET;
+  req->body = NULL;
 
   pthread_create(&tid, NULL, send_request_thread,(void *)req);
   pthread_detach(tid);
@@ -373,10 +377,10 @@ int vmod_send_post_request_threaded(struct sess *sp, const char* host, const cha
   struct request *req = (struct request*)malloc(sizeof(struct request));  
   req->host = strdup(host);
   req->path = strdup(path);
-	req->body = strdup(body);
+  req->body = strdup(body);
   if (header!=NULL) req->header = strdup(header);
   req->port = porti;
-	req->http_verb = HTTP_POST;
+  req->http_verb = HTTP_POST;
 
   pthread_create(&tid, NULL, send_request_thread,(void *)req);
   pthread_detach(tid);
