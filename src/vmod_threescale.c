@@ -22,9 +22,9 @@ struct request {
   char* host;
   char* path;
   char* header;
-	char* body;
+  char* body;
   int port;
-	int http_verb;
+  int http_verb;
 };
 
 
@@ -80,9 +80,9 @@ int get_http_response_code(char* buffer, int buffer_len) {
     }
     else {
       if ((buffer[i]==32) && (first_space==1)) {
-				respcode[conti]='\0';
-				i=buffer_len;
-			}
+        respcode[conti]='\0';
+        i=buffer_len;
+      }
       else {
         if (first_space==1) {
           respcode[conti]=buffer[i];
@@ -97,22 +97,22 @@ int get_http_response_code(char* buffer, int buffer_len) {
 }
 
 char* get_string_between_delimiters(const char* string, const char* left, const char* right) {
-	
-    const char* beginning = strstr(string, left);
-		if (beginning == NULL) return NULL;
-		
-    const char* end = strstr(string, right);
-		if(end == NULL) return NULL;
-		
-		beginning += strlen(left);
-    ptrdiff_t len = end - beginning;
+  
+  const char* beginning = strstr(string, left);
+  if (beginning == NULL) return NULL;
 
-		if (len<=0) return NULL;
-    char* out = malloc(len + 1);
-    strncpy(out, beginning, len);
+  const char* end = strstr(string, right);
+  if(end == NULL) return NULL;
 
-    (out)[len] = 0;
-		return out;
+  beginning += strlen(left);
+  ptrdiff_t len = end - beginning;
+
+  if (len<=0) return NULL;
+  char* out = malloc(len + 1);
+  strncpy(out, beginning, len);
+
+  (out)[len] = 0;
+  return out;
 }
 
 
@@ -134,38 +134,37 @@ char* send_request(struct request* req, int* http_response_code) {
     char* template;
     char* srequest;
 
-		if (req->http_verb==HTTP_POST) {
-			
-			int body_len = strlen(req->body);
-			char tmp[128];
-			sprintf(tmp,"%d",body_len); 
-			int body_len_len = strlen(tmp);
-			
-			if ((req->header==NULL) || (strlen(req->header)==0)) {
-      	template = "POST %s HTTP/1.1\r\nHost: %s\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: %d\r\nConnection: Close\r\n\r\n%s";
-      	srequest = (char*)malloc(sizeof(char)*((int)strlen(template)+(int)strlen(req->path)+(int)strlen(req->host)+body_len+body_len_len-7));
-      	sprintf(srequest,template,req->path,req->host,body_len,req->body);
-    	}
-    	else {
-      	template = "POST %s HTTP/1.1\r\nHost: %s\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: %d\r\n%s\r\nConnection: Close\r\n\r\n%s";
-      	srequest = (char*)malloc(sizeof(char)*((int)strlen(template)+(int)strlen(req->path)+(int)strlen(req->host)+(int)strlen(req->header)+body_len+body_len_len-9));
-      	sprintf(srequest,template,req->path,req->host,body_len,req->header,req->body);
-    	}
-			
-		}
-		else {
-    	if ((req->header==NULL) || (strlen(req->header)==0)) {
-      	template = "GET %s HTTP/1.1\r\nHost: %s\r\nConnection: Close\r\n\r\n";
-      	srequest = (char*)malloc(sizeof(char)*((int)strlen(template)+(int)strlen(req->path)+(int)strlen(req->host)-3));
-      	sprintf(srequest,template,req->path,req->host);
-    	}
-    	else {
-      	template = "GET %s HTTP/1.1\r\nHost: %s\r\n%s\r\nConnection: Close\r\n\r\n";
-      	srequest = (char*)malloc(sizeof(char)*((int)strlen(template)+(int)strlen(req->path)+(int)strlen(req->host)+(int)strlen(req->header)-5));
-      	sprintf(srequest,template,req->path,req->host,req->header);
-    	}
-		}
-		
+    if (req->http_verb==HTTP_POST) {
+
+      int body_len = strlen(req->body);
+      char tmp[128];
+      sprintf(tmp,"%d",body_len); 
+      int body_len_len = strlen(tmp);
+      
+      if ((req->header==NULL) || (strlen(req->header)==0)) {
+        template = "POST %s HTTP/1.1\r\nHost: %s\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: %d\r\nConnection: Close\r\n\r\n%s";
+        srequest = (char*)malloc(sizeof(char)*((int)strlen(template)+(int)strlen(req->path)+(int)strlen(req->host)+body_len+body_len_len-7));
+        sprintf(srequest,template,req->path,req->host,body_len,req->body);
+      }
+      else {
+        template = "POST %s HTTP/1.1\r\nHost: %s\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: %d\r\n%s\r\nConnection: Close\r\n\r\n%s";
+        srequest = (char*)malloc(sizeof(char)*((int)strlen(template)+(int)strlen(req->path)+(int)strlen(req->host)+(int)strlen(req->header)+body_len+body_len_len-9));
+        sprintf(srequest,template,req->path,req->host,body_len,req->header,req->body);
+      }
+    }
+    else {
+      if ((req->header==NULL) || (strlen(req->header)==0)) {
+        template = "GET %s HTTP/1.1\r\nHost: %s\r\nConnection: Close\r\n\r\n";
+        srequest = (char*)malloc(sizeof(char)*((int)strlen(template)+(int)strlen(req->path)+(int)strlen(req->host)-3));
+        sprintf(srequest,template,req->path,req->host);
+      }
+      else {
+        template = "GET %s HTTP/1.1\r\nHost: %s\r\n%s\r\nConnection: Close\r\n\r\n";
+        srequest = (char*)malloc(sizeof(char)*((int)strlen(template)+(int)strlen(req->path)+(int)strlen(req->host)+(int)strlen(req->header)-5));
+        sprintf(srequest,template,req->path,req->host,req->header);
+      }
+    }
+    
     if((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) >= 0) {
 
       remote = (struct sockaddr_in *)malloc(sizeof(struct sockaddr_in *));
@@ -255,29 +254,29 @@ char *url_encode(char *str) {
 // ****************************************************************************
 
 const char *vmod_url_encode(struct sess *sp, const char* string) {
-		return url_encode(string);
+    return url_encode(string);
 }
 
 int vmod_response_http_code(struct sess *sp, const char* response_body) {
 
-	if (response_body==NULL) return -1;
-	int len = strlen(response_body);
-	if (len>0) {
-		return get_http_response_code(response_body,len);
-	}
-	else return -1;
-	
+  if (response_body==NULL) return -1;
+  int len = strlen(response_body);
+  if (len>0) {
+    return get_http_response_code(response_body,len);
+  }
+  else return -1;
+  
 }
 
 const char* vmod_response_key(struct sess *sp, const char* response_body) {
-	
-	if (response_body==NULL) return NULL;
-	int len = strlen(response_body);
-	if (len>0) {
-		return get_string_between_delimiters(response_body,"<key>","</key>");
-	}
-	else return NULL;
-	
+  
+  if (response_body==NULL) return NULL;
+  int len = strlen(response_body);
+  if (len>0) {
+    return get_string_between_delimiters(response_body,"<key>","</key>");
+  }
+  else return NULL;
+  
 }
 
 
