@@ -8,6 +8,8 @@
 #include <netdb.h>
 #include <pthread.h>
 #include <errno.h>
+#include <ctype.h>
+
 
 #include "vrt.h"
 #include "bin/varnishd/cache.h"
@@ -16,7 +18,7 @@
 #define HTTP_GET 1
 #define HTTP_POST 2
 
-char *url_encode(char *str);
+char *url_encode(const char *str);
 
 struct request {
   char* host;
@@ -67,7 +69,7 @@ char* get_ip(const char *host) {
 
 }
 
-int get_http_response_code(char* buffer, int buffer_len) {
+int get_http_response_code(const char* buffer, int buffer_len) {
 
   int first_space=0;
   int conti=0;
@@ -97,18 +99,17 @@ int get_http_response_code(char* buffer, int buffer_len) {
 }
 
 char* get_string_between_delimiters(const char* string, const char* left, const char* right) {
-  
   const char* beginning = strstr(string, left);
   if (beginning == NULL) return NULL;
-
+		
   const char* end = strstr(string, right);
   if(end == NULL) return NULL;
-
+		
   beginning += strlen(left);
   ptrdiff_t len = end - beginning;
 
   if (len<=0) return NULL;
-  char* out = malloc(len + 1);
+  char* out = (char *)calloc(len + 1, sizeof(char));
   strncpy(out, beginning, len);
 
   (out)[len] = 0;
@@ -121,7 +122,7 @@ char* send_request(struct request* req, int* http_response_code) {
   struct sockaddr_in *remote;
   int sock;
   int buffer_size = 16*1024;
-  char* buffer = (char*)malloc(sizeof(char)*buffer_size);
+  char* buffer = (char*)calloc(buffer_size,sizeof(char));
   int tmpres;
 
   char* ip = get_ip(req->host);
@@ -235,8 +236,10 @@ char to_hex(char code) {
 
 /* Returns a url-encoded version of str */
 /* IMPORTANT: be sure to free() the returned string after use */
-char *url_encode(char *str) {
-  char *pstr = str, *buf = malloc(strlen(str) * 3 + 1), *pbuf = buf;
+char *url_encode(const char *str) {
+  const char *pstr = str;
+  char *buf = (char*)malloc(strlen(str) * 3 + 1);
+  char *pbuf = buf;
   while (*pstr) {
     if (isalnum(*pstr) || *pstr == '-' || *pstr == '_' || *pstr == '.' || *pstr == '~') 
       *pbuf++ = *pstr;
