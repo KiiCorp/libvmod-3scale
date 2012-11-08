@@ -107,7 +107,7 @@ char* get_string_between_delimiters(struct sess *sp, const char* string, const c
   ptrdiff_t len = end - beginning;
 
   if (len<=0) return NULL;
-  char* out = (char *)calloc(len + 1, sizeof(char));
+  char* out = WS_Alloc(sp->wrk->ws, (len + 1) * sizeof(char));
   strncpy(out, beginning, len);
 
   (out)[len] = 0;
@@ -115,15 +115,16 @@ char* get_string_between_delimiters(struct sess *sp, const char* string, const c
 }
 
 
-char* send_request(struct request* req, int* http_response_code) {
+char* send_request(struct sess *sp, struct request* req, int* http_response_code) {
 
   struct sockaddr_in *remote;
   int sock;
   int buffer_size = 16*1024;
-  char* buffer = (char*)calloc(buffer_size,sizeof(char));
+  char* buffer = WS_Alloc(sp->wrk->ws, buffer_size * sizeof(char));
+  memset((void *)buffer, 0, buffer_size * sizeof(char));
   int tmpres;
 
-  char* ip = get_ip(req->host);
+  char* ip = get_ip(sp, req->host);
   
   if (ip==NULL) {
     perror("libvmod_3scale: could not resolve the ip");
