@@ -18,7 +18,7 @@
 #define HTTP_GET 1
 #define HTTP_POST 2
 
-char *url_encode(const char *str);
+char *url_encode(struct sess *sp, const char *str);
 
 struct request {
   char* host;
@@ -35,13 +35,13 @@ int init_function(struct vmod_priv *priv, const struct VCL_conf *conf) {
 }
 
 
-char* get_ip(const char *host) {
+char* get_ip(struct sess *sp, const char *host) {
 
   struct addrinfo hints, *res, *p;
   int status;
   int iplen = 15;
   void *addr;
-  char *ipstr = (char *)malloc(iplen+1);
+  char *ipstr = WS_Alloc(sp->wrk->ws, iplen +1);
   memset(ipstr, 0, iplen+1);
   
   memset(&hints, 0, sizeof hints);
@@ -49,7 +49,6 @@ char* get_ip(const char *host) {
   hints.ai_socktype = SOCK_STREAM;
   
   if( (status = getaddrinfo(host, NULL, &hints, &res) ) != 0) {
-    free(ipstr);
     return NULL;
   }
     
@@ -57,7 +56,6 @@ char* get_ip(const char *host) {
   addr = &(ipv4->sin_addr);
 
   if (inet_ntop(res->ai_family, addr, ipstr, iplen+1) == NULL) {
-    free(ipstr);
     freeaddrinfo(res);  
     return NULL;
   }
@@ -98,7 +96,7 @@ int get_http_response_code(const char* buffer, int buffer_len) {
   
 }
 
-char* get_string_between_delimiters(const char* string, const char* left, const char* right) {
+char* get_string_between_delimiters(struct sess *sp, const char* string, const char* left, const char* right) {
   const char* beginning = strstr(string, left);
   if (beginning == NULL) return NULL;
 		
@@ -144,31 +142,31 @@ char* send_request(struct request* req, int* http_response_code) {
       
       if ((req->header==NULL) || (strlen(req->header)==0)) {
         template = "POST %s HTTP/1.1\r\nHost: %s\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: %d\r\nConnection: Close\r\n\r\n%s";
-        srequest = (char*)malloc(sizeof(char)*((int)strlen(template)+(int)strlen(req->path)+(int)strlen(req->host)+body_len+body_len_len-7));
+        srequest = WS_Alloc(sp->wrk->ws, sizeof(char)*((int)strlen(template)+(int)strlen(req->path)+(int)strlen(req->host)+body_len+body_len_len-7));
         sprintf(srequest,template,req->path,req->host,body_len,req->body);
       }
       else {
         template = "POST %s HTTP/1.1\r\nHost: %s\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: %d\r\n%s\r\nConnection: Close\r\n\r\n%s";
-        srequest = (char*)malloc(sizeof(char)*((int)strlen(template)+(int)strlen(req->path)+(int)strlen(req->host)+(int)strlen(req->header)+body_len+body_len_len-9));
+        srequest = WS_Alloc(sp->wrk->ws, sizeof(char)*((int)strlen(template)+(int)strlen(req->path)+(int)strlen(req->host)+(int)strlen(req->header)+body_len+body_len_len-9));
         sprintf(srequest,template,req->path,req->host,body_len,req->header,req->body);
       }
     }
     else {
       if ((req->header==NULL) || (strlen(req->header)==0)) {
         template = "GET %s HTTP/1.1\r\nHost: %s\r\nConnection: Close\r\n\r\n";
-        srequest = (char*)malloc(sizeof(char)*((int)strlen(template)+(int)strlen(req->path)+(int)strlen(req->host)-3));
+        srequest = WS_Alloc(sp->wrk->ws, sizeof(char)*((int)strlen(template)+(int)strlen(req->path)+(int)strlen(req->host)-3));
         sprintf(srequest,template,req->path,req->host);
       }
       else {
         template = "GET %s HTTP/1.1\r\nHost: %s\r\n%s\r\nConnection: Close\r\n\r\n";
-        srequest = (char*)malloc(sizeof(char)*((int)strlen(template)+(int)strlen(req->path)+(int)strlen(req->host)+(int)strlen(req->header)-5));
+        srequest = WS_Alloc(sp->wrk->ws, sizeof(char)*((int)strlen(template)+(int)strlen(req->path)+(int)strlen(req->host)+(int)strlen(req->header)-5));
         sprintf(srequest,template,req->path,req->host,req->header);
       }
     }
     
     if((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) >= 0) {
 
-      remote = (struct sockaddr_in *)malloc(sizeof(struct sockaddr_in *));
+      remote = (struct sockaddr_in *) WS_Alloc(sp->wrk->ws, sizeof(struct sockaddr_in));
       remote->sin_family = AF_INET;
       
       inet_pton(AF_INET, ip, (void *)(&(remote->sin_addr.s_addr)));
@@ -191,16 +189,12 @@ char* send_request(struct request* req, int* http_response_code) {
         perror("libvmod_3scale: could not connect to socket");
       }
 
-      free(remote);
       close(sock);
-
     }
     else {
       perror("libvmod_3scale: could not obtain socket");
     }
 
-    free(srequest);
-    free(ip);
   }
 
   return buffer;
@@ -235,10 +229,10 @@ char to_hex(char code) {
 }
 
 /* Returns a url-encoded version of str */
-/* IMPORTANT: be sure to free() the returned string after use */
-char *url_encode(const char *str) {
+/* IMPORTANT: be sure to free() the returned string after use. TODO: Is this comment still true?*/
+char *url_encode(struct sess *sp, const char *str) {
   const char *pstr = str;
-  char *buf = (char*)malloc(strlen(str) * 3 + 1);
+  char *buf = WS_Alloc(sp->wrk->ws, strlen(str) * 3 + 1);
   char *pbuf = buf;
   while (*pstr) {
     if (isalnum(*pstr) || *pstr == '-' || *pstr == '_' || *pstr == '.' || *pstr == '~') 
@@ -257,7 +251,7 @@ char *url_encode(const char *str) {
 // ****************************************************************************
 
 const char *vmod_url_encode(struct sess *sp, const char* string) {
-    return url_encode(string);
+    return url_encode(sp, string);
 }
 
 int vmod_response_http_code(struct sess *sp, const char* response_body) {
@@ -276,7 +270,7 @@ const char* vmod_response_key(struct sess *sp, const char* response_body) {
   if (response_body==NULL) return NULL;
   int len = strlen(response_body);
   if (len>0) {
-    return get_string_between_delimiters(response_body,"<key>","</key>");
+    return get_string_between_delimiters(sp, response_body,"<key>","</key>");
   }
   else return NULL;
   
@@ -291,7 +285,7 @@ int vmod_send_get_request(struct sess *sp, const char* host, const char* port, c
     if (porti<=0) porti=80;
   }
 
-  struct request *req = (struct request*)malloc(sizeof(struct request));  
+  struct request *req = (struct request*) WS_Alloc(sp->wrk->ws, sizeof(struct request));
   req->host = strdup(host);
   req->path = strdup(path);
   req->header = strdup(header);
@@ -300,14 +294,15 @@ int vmod_send_get_request(struct sess *sp, const char* host, const char* port, c
   req->body = NULL;
 
   int http_response_code;
-  char* http_body = send_request(req,&http_response_code);
- 
+  char* http_body = send_request(sp, req, &http_response_code);
+
+  /*
   if (req->host!=NULL) free(req->host);
   if (req->path!=NULL) free(req->path);
   if (req->header!=NULL) free(req->header);
   if (req!=NULL) free(req);
   if (http_body!=NULL) free(http_body);
-
+  */
   return http_response_code;
 
 }
@@ -320,7 +315,7 @@ const char* vmod_send_get_request_body(struct sess *sp, const char* host, const 
     if (porti<=0) porti=80;
   }
 
-  struct request *req = (struct request*)malloc(sizeof(struct request));  
+  struct request *req = (struct request*)WS_Alloc(sp->wrk->ws, sizeof(struct request));
   req->host = strdup(host);
   req->path = strdup(path);
   req->header = strdup(header);
@@ -329,14 +324,14 @@ const char* vmod_send_get_request_body(struct sess *sp, const char* host, const 
   req->body = NULL;
 
   int http_response_code;
-  char* http_body = send_request(req, &http_response_code);
-
+  char* http_body = send_request(sp, req, &http_response_code);
+  /*
   if (req->host!=NULL) free(req->host);
   if (req->path!=NULL) free(req->path);
   if (req->header!=NULL) free(req->header);
   if (req->body!=NULL) free(req->body);
   if (req!=NULL) free(req);
-  
+  */
   return http_body;
 
 }
@@ -352,7 +347,7 @@ int vmod_send_get_request_threaded(struct sess *sp, const char* host, const char
     if (porti<=0) porti=80;
   }
 
-  struct request *req = (struct request*)malloc(sizeof(struct request));  
+  struct request *req = (struct request*) WS_Alloc(sp->wrk->ws, sizeof(struct request));
   req->host = strdup(host);
   req->path = strdup(path);
   if (header!=NULL) req->header = strdup(header);
@@ -376,7 +371,7 @@ int vmod_send_post_request_threaded(struct sess *sp, const char* host, const cha
     if (porti<=0) porti=80;
   }
 
-  struct request *req = (struct request*)malloc(sizeof(struct request));  
+  struct request *req = (struct request*)WS_Alloc(sp->wrk->ws, sizeof(struct request));
   req->host = strdup(host);
   req->path = strdup(path);
   req->body = strdup(body);
