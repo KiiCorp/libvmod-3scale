@@ -202,12 +202,12 @@ char* send_request(struct sess *sp, struct request* req, int* http_response_code
   
 }
 
-void* send_request_thread(void* data) {
+void* send_request_thread(struct sess *sp, void* data) {
 
-  struct request *req = (struct request *)data; 
+  struct request *req = (struct request *)data;
   int http_response_code;
 
-  char* buffer = send_request(req, &http_response_code);
+  char* buffer = send_request(sp, req, &http_response_code);
 
   if (buffer!=NULL) free(buffer);
   if (req->host!=NULL) free(req->host);
