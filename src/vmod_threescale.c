@@ -287,9 +287,15 @@ int vmod_send_get_request(struct sess *sp, const char* host, const char* port, c
   }
 
   struct request *req = (struct request*) WS_Alloc(sp->wrk->ws, sizeof(struct request));
-  req->host = strdup(host);
-  req->path = strdup(path);
-  req->header = strdup(header);
+  req->host = WS_Alloc(sp->wrk->ws, strlen(host));
+  memcpy(req->host, (void *) host, strlen(host));
+
+  req->path = WS_Alloc(sp->wrk->ws, strlen(path));
+  memcpy(req->path, (void *) path, strlen(path));
+
+  req->header = WS_Alloc(sp->wrk->ws, strlen(header));
+  memcpy(req->header, (void *) header, strlen(header));
+
   req->port = porti;
   req->http_verb = HTTP_GET;
   req->body = NULL;
@@ -297,13 +303,6 @@ int vmod_send_get_request(struct sess *sp, const char* host, const char* port, c
   int http_response_code;
   char* http_body = send_request(sp, req, &http_response_code);
 
-  /*
-  if (req->host!=NULL) free(req->host);
-  if (req->path!=NULL) free(req->path);
-  if (req->header!=NULL) free(req->header);
-  if (req!=NULL) free(req);
-  if (http_body!=NULL) free(http_body);
-  */
   return http_response_code;
 
 }
@@ -317,22 +316,22 @@ const char* vmod_send_get_request_body(struct sess *sp, const char* host, const 
   }
 
   struct request *req = (struct request*)WS_Alloc(sp->wrk->ws, sizeof(struct request));
-  req->host = strdup(host);
-  req->path = strdup(path);
-  req->header = strdup(header);
+
+  req->host = WS_Alloc(sp->wrk->ws, strlen(host));
+  memcpy(req->host, (void *) host, strlen(host));
+
+  req->path = WS_Alloc(sp->wrk->ws, strlen(path));
+  memcpy(req->path, (void *) path, strlen(path));
+
+  req->header = WS_Alloc(sp->wrk->ws, strlen(header));
+  memcpy(req->header, (void *) header, strlen(header));
+
   req->port = porti;
   req->http_verb = HTTP_GET;
   req->body = NULL;
 
   int http_response_code;
   char* http_body = send_request(sp, req, &http_response_code);
-  /*
-  if (req->host!=NULL) free(req->host);
-  if (req->path!=NULL) free(req->path);
-  if (req->header!=NULL) free(req->header);
-  if (req->body!=NULL) free(req->body);
-  if (req!=NULL) free(req);
-  */
   return http_body;
 
 }
