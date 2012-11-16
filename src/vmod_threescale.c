@@ -29,6 +29,10 @@ struct request {
   int http_verb;
 };
 
+struct session_and_request {
+  struct sess    *sp;
+  struct request *req;
+};
 
 int init_function(struct vmod_priv *priv, const struct VCL_conf *conf) {
   return (0);
@@ -202,19 +206,12 @@ char* send_request(struct sess *sp, struct request* req, int* http_response_code
   
 }
 
-void* send_request_thread(struct sess *sp, void* data) {
+void* send_request_thread(void* data) {
 
-  struct request *req = (struct request *)data;
+  struct session_and_request *sess_and_req = (struct session_and_request *) data;
   int http_response_code;
 
-  char* buffer = send_request(sp, req, &http_response_code);
-
-  if (buffer!=NULL) free(buffer);
-  if (req->host!=NULL) free(req->host);
-  if (req->path!=NULL) free(req->path);
-  if (req->header!=NULL) free(req->header);
-  if (req->body!=NULL) free(req->body);
-  if (req!=NULL) free(req);
+  char* buffer = send_request((struct sess *) sess_and_req->sp, (struct request *) sess_and_req->req, &http_response_code);
 
   pthread_exit(NULL);
 
@@ -347,15 +344,27 @@ int vmod_send_get_request_threaded(struct sess *sp, const char* host, const char
     if (porti<=0) porti=80;
   }
 
+  struct session_and_request *sess_and_req = (struct session_and_request*) WS_Alloc(sp->wrk->ws, sizeof(struct session_and_request));
   struct request *req = (struct request*) WS_Alloc(sp->wrk->ws, sizeof(struct request));
-  req->host = strdup(host);
-  req->path = strdup(path);
-  if (header!=NULL) req->header = strdup(header);
+
+  req->host = WS_Alloc(sp->wrk->ws, strlen(host));
+  memcpy(req->host, (void *) host, strlen(host));
+
+  req->path = WS_Alloc(sp->wrk->ws, strlen(path));
+  memcpy(req->path, (void *) path, strlen(path));
+
+  if (header!=NULL) {
+    req->header = WS_Alloc(sp->wrk->ws, strlen(header));
+    memcpy(req->header, (void *) header, strlen(header));
+  }
+
   req->port = porti; 
   req->http_verb = HTTP_GET;
   req->body = NULL;
 
-  pthread_create(&tid, NULL, send_request_thread,(void *)req);
+  sess_and_req->sp = sp;
+  sess_and_req->req = req;
+  pthread_create(&tid, NULL, send_request_thread, (void *) sess_and_req);
   pthread_detach(tid);
   
   return 0;
@@ -371,15 +380,29 @@ int vmod_send_post_request_threaded(struct sess *sp, const char* host, const cha
     if (porti<=0) porti=80;
   }
 
-  struct request *req = (struct request*)WS_Alloc(sp->wrk->ws, sizeof(struct request));
-  req->host = strdup(host);
-  req->path = strdup(path);
-  req->body = strdup(body);
-  if (header!=NULL) req->header = strdup(header);
+  struct session_and_request *sess_and_req = (struct session_and_request*) WS_Alloc(sp->wrk->ws, sizeof(struct session_and_request));
+  struct request *req = (struct request*) WS_Alloc(sp->wrk->ws, sizeof(struct request));
+
+  req->host = WS_Alloc(sp->wrk->ws, strlen(host));
+  memcpy(req->host, (void *) host, strlen(host));
+
+  req->path = WS_Alloc(sp->wrk->ws, strlen(path));
+  memcpy(req->path, (void *) path, strlen(path));
+
+  req->body = WS_Alloc(sp->wrk->ws, strlen(body));
+  memcpy(req->body, (void *) body, strlen(body));
+
+  if (header!=NULL) {
+    req->header = WS_Alloc(sp->wrk->ws, strlen(header));
+    memcpy(req->header, (void *) header, strlen(header));
+  }
+
   req->port = porti;
   req->http_verb = HTTP_POST;
 
-  pthread_create(&tid, NULL, send_request_thread,(void *)req);
+  sess_and_req->sp  = sp;
+  sess_and_req->req = req;
+  pthread_create(&tid, NULL, send_request_thread,(void *) sess_and_req);
   pthread_detach(tid);
   
   return 0;
