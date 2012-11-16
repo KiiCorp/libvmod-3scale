@@ -41,14 +41,15 @@ int init_function(struct vmod_priv *priv, const struct VCL_conf *conf) {
 
 char* get_ip(struct sess *sp, const char *host) {
 
-  struct addrinfo hints, *res, *p;
+  struct addrinfo hints;
+  struct addrinfo *res = WS_Alloc(sp->wrk->ws, sizeof(struct addrinfo));
   int status;
   int iplen = 15;
   void *addr;
   char *ipstr = WS_Alloc(sp->wrk->ws, iplen +1);
-  memset(ipstr, 0, iplen+1);
+  memset(ipstr, 0, iplen +1);
   
-  memset(&hints, 0, sizeof hints);
+  memset(&hints, 0, sizeof(hints));
   hints.ai_family = AF_INET;
   hints.ai_socktype = SOCK_STREAM;
   
@@ -67,8 +68,6 @@ char* get_ip(struct sess *sp, const char *host) {
     freeaddrinfo(res);
     return ipstr;    
   }
-
-
 }
 
 int get_http_response_code(const char* buffer, int buffer_len) {
