@@ -99,7 +99,7 @@ int get_http_response_code(const char* buffer, int buffer_len) {
   
 }
 
-char* get_string_between_delimiters(const char* string, const char* left, const char* right) {
+char* get_string_between_delimiters(const char* string, const char* left, const char* right, char * out) {
   const char* beginning = strstr(string, left);
   if (beginning == NULL) return NULL;
 		
@@ -110,7 +110,7 @@ char* get_string_between_delimiters(const char* string, const char* left, const 
   ptrdiff_t len = end - beginning;
 
   if (len<=0) return NULL;
-  char* out = (char *)calloc(len + 1, sizeof(char));
+//  char* out = (char *)WS_Alloc(sp->wrk->ws,len + 1);
   strncpy(out, beginning, len);
 
   (out)[len] = 0;
@@ -278,8 +278,12 @@ const char* vmod_response_key(struct sess *sp, const char* response_body) {
   
   if (response_body==NULL) return NULL;
   int len = strlen(response_body);
+  char* out = (char *)WS_Alloc(sp->wrk->ws,len + 1);
+
+  get_string_between_delimiters(response_body,"<key>","</key>", out);
+  
   if (len>0) {
-    return get_string_between_delimiters(response_body,"<key>","</key>");
+    return (const char*) out;
   }
   else return NULL;
   
