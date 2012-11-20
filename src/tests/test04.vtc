@@ -9,19 +9,16 @@ varnish v1 -vcl+backend {
 	import threescale from "${vmod_topbuild}/src/.libs/libvmod_threescale.so";
 
 	sub vcl_deliver {
-		set resp.http.code1 = threescale.send_get_request("localhost", "80", "/authorize.html", "");
-		
 	
-
+		set resp.http.res2 = threescale.send_get_request_body("localhost", "80", "/oauth_authorize.html", "");
 	}
 } -start
 
 client c1 {
 	txreq -url "/"
 	rxresp
-	expect resp.http.code1 == "200"
-
 	
+	expect resp.http.res2 == "HTTP/1.1 200 OK"
 }
 
 
