@@ -36,14 +36,14 @@ int init_function(struct vmod_priv *priv, const struct VCL_conf *conf) {
 }
 
 
-char* get_ip(const char *host) {
+char* get_ip(const char *host, char * ipstr) {
 
   struct addrinfo hints, *res;
   int status;
   int iplen = 15;
   void *addr;
-  char *ipstr = (char *)malloc(iplen+1);
-  memset(ipstr, 0, iplen+1);
+//  char *ipstr = (char *)malloc(iplen+1);
+ // memset(ipstr, 0, iplen+1);
   
   memset(&hints, 0, sizeof hints);
   hints.ai_family = AF_INET;
@@ -66,7 +66,6 @@ char* get_ip(const char *host) {
     freeaddrinfo(res);
     return ipstr;    
   }
-
 
 }
 
@@ -125,7 +124,10 @@ int send_request(struct request* req, int* http_response_code, char * buffer) {
   int buffer_size = TAILLE;
   int tmpres;
 
-  char* ip = get_ip(req->host);
+  char ip[16];
+  memset( (char*) ip, 0, 16);
+  
+   get_ip(req->host, (char*) ip);
   
   if (ip==NULL) {
     perror("libvmod_3scale: could not resolve the ip");
@@ -200,7 +202,7 @@ int send_request(struct request* req, int* http_response_code, char * buffer) {
     }
 
     free(srequest);
-    free(ip);
+  //  free(ip);
   }
 
   return 0;
