@@ -279,14 +279,30 @@ const char* vmod_response_key(struct sess *sp, const char* response_body) {
   
   if (response_body==NULL) return NULL;
   int len = strlen(response_body);
-  char* out = (char *)WS_Alloc(sp->wrk->ws,len + 1);
 
-  get_string_between_delimiters(response_body,"<key>","</key>", out);
+  char *p;
+  unsigned u, v;
+
+  u = WS_Reserve(sp->wrk->ws, 0); /* Reserve some work space */
+  p = sp->wrk->ws->f;		/* Front of workspace area */
+
+  char out[TAILLE];
+
+  get_string_between_delimiters(response_body,"<key>","</key>", (char*)out);
+
+
+ 	v = snprintf(p, u, "%s", out);
+	v++;
+	if (v > u) {
+		/* No space, reset and leave */
+		WS_Release(sp->wrk->ws, 0);
+		return (NULL);
+	}
+	/* Update work space with what we've used */
+	WS_Release(sp->wrk->ws, v);
+	return (p);
+
   
-  if (len>0) {
-    return (const char*) out;
-  }
-  else return NULL;
   
 }
 
