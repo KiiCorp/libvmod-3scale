@@ -133,9 +133,9 @@ int send_request(struct request* req, int* http_response_code, char * buffer) {
     perror("libvmod_3scale: could not resolve the ip");
   }
   else {
-    
+
     char* template;
-    char* srequest;
+    char * srequest;
 
     if (req->http_verb==HTTP_POST) {
 
@@ -178,7 +178,7 @@ int send_request(struct request* req, int* http_response_code, char * buffer) {
 
       if(connect(sock, (struct sockaddr *)remote, sizeof(struct sockaddr)) >= 0) {
         int sent = 0;
-        while(sent < (int)strlen(srequest)) {
+        while(sent < (int)strlen(srequest+1)) {
           tmpres = send(sock, srequest+sent, (int)strlen(srequest)-sent, 0);
           sent += tmpres;
         }
@@ -200,9 +200,10 @@ int send_request(struct request* req, int* http_response_code, char * buffer) {
     else {
       perror("libvmod_3scale: could not obtain socket");
     }
+	
+	 free(srequest); 
 
-    free(srequest);
-  //  free(ip);
+
   }
 
   return 0;
@@ -401,7 +402,7 @@ int vmod_send_get_request_threaded(struct sess *sp, const char* host, const char
   struct request *req = (struct request*)malloc(sizeof(struct request));  
   req->host = (char*)host;
   req->path = (char*)path;
-  if (header!=NULL) req->header = strdup(header);
+  if (header!=NULL) req->header = (char*)header;
   req->port = porti; 
   req->http_verb = HTTP_GET;
   req->body = NULL;
@@ -426,7 +427,7 @@ int vmod_send_post_request_threaded(struct sess *sp, const char* host, const cha
   req->host = (char*)host;
   req->path = (char*)path;
   req->body = (char*)body;
-  if (header!=NULL) req->header = strdup(header);
+  if (header!=NULL) req->header = (char*)header;
   req->port = porti;
   req->http_verb = HTTP_POST;
 
