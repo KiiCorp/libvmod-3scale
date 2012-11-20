@@ -3,6 +3,10 @@ varnishtest "Test vmod 3Scale"
 server s1 {
        rxreq
        txresp
+       accept
+       rxreq
+       txresp
+
 } -start
 
 varnish v1 -vcl+backend {
@@ -10,7 +14,7 @@ varnish v1 -vcl+backend {
 
 	sub vcl_deliver {
 	
-		set resp.http.res2 = threescale.send_get_request_body("localhost", "80", "/oauth_authorize.html", "");
+		set resp.http.res2 = threescale.send_get_request_body("${s1_addr}", "${s1_port}", "/oauth_authorize.html", "");
 	}
 } -start
 
@@ -18,7 +22,7 @@ client c1 {
 	txreq -url "/"
 	rxresp
 	
-	expect resp.http.res2 == "HTTP/1.1 200 OK"
+	expect resp.http.res2 == "HTTP/1.1 200 Ok"
 }
 
 
