@@ -38,14 +38,14 @@ int init_function(struct vmod_priv *priv, const struct VCL_conf *conf) {
 
 char* get_ip(const char *host) {
 
-  struct addrinfo hints, *res, *p;
+  struct addrinfo hints, *res;
   int status;
   int iplen = 15;
   void *addr;
   char *ipstr = (char *)malloc(iplen+1);
   memset(ipstr, 0, iplen+1);
   
- // memset(&hints, 0, sizeof hints);
+  memset(&hints, 0, sizeof hints);
   hints.ai_family = AF_INET;
   hints.ai_socktype = SOCK_STREAM;
   
@@ -110,7 +110,7 @@ char* get_string_between_delimiters(const char* string, const char* left, const 
   ptrdiff_t len = end - beginning;
 
   if (len<=0) return NULL;
-//  char* out = (char *)WS_Alloc(sp->wrk->ws,len + 1);
+
   strncpy(out, beginning, len);
 
   (out)[len] = 0;
@@ -123,7 +123,6 @@ int send_request(struct request* req, int* http_response_code, char * buffer) {
   struct sockaddr_in *remote;
   int sock;
   int buffer_size = TAILLE;
-//  char* buffer = (char*)calloc(buffer_size,sizeof(char));
   int tmpres;
 
   char* ip = get_ip(req->host);
@@ -212,7 +211,7 @@ void* send_request_thread(void* data) {
 
   struct request *req = (struct request *)data; 
   int http_response_code;
- char http_body[TAILLE];
+  char http_body[TAILLE];
 
 
    send_request(req, &http_response_code, (char*)http_body);
