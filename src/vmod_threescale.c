@@ -45,7 +45,7 @@ char* get_ip(const char *host) {
   char *ipstr = (char *)malloc(iplen+1);
   memset(ipstr, 0, iplen+1);
   
-  memset(&hints, 0, sizeof hints);
+ // memset(&hints, 0, sizeof hints);
   hints.ai_family = AF_INET;
   hints.ai_socktype = SOCK_STREAM;
   
@@ -140,29 +140,29 @@ int send_request(struct request* req, int* http_response_code, char * buffer) {
 
       int body_len = strlen(req->body);
       char tmp[128];
-      sprintf(tmp,"%d",body_len); 
+      sprintf(tmp,"%d",body_len+1); 
       int body_len_len = strlen(tmp);
       
       if ((req->header==NULL) || (strlen(req->header)==0)) {
         template = "POST %s HTTP/1.1\r\nHost: %s\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: %d\r\nConnection: Close\r\n\r\n%s";
-        srequest = (char*)malloc(sizeof(char)*((int)strlen(template)+(int)strlen(req->path)+(int)strlen(req->host)+body_len+body_len_len-7));
+        srequest = (char*)malloc(sizeof(char)*((int)strlen(template)+(int)strlen(req->path)+(int)strlen(req->host)+body_len+body_len_len+1));
         sprintf(srequest,template,req->path,req->host,body_len,req->body);
       }
       else {
         template = "POST %s HTTP/1.1\r\nHost: %s\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: %d\r\n%s\r\nConnection: Close\r\n\r\n%s";
-        srequest = (char*)malloc(sizeof(char)*((int)strlen(template)+(int)strlen(req->path)+(int)strlen(req->host)+(int)strlen(req->header)+body_len+body_len_len-9));
+        srequest = (char*)malloc(sizeof(char)*((int)strlen(template)+(int)strlen(req->path)+(int)strlen(req->host)+(int)strlen(req->header)+body_len+body_len_len+1));
         sprintf(srequest,template,req->path,req->host,body_len,req->header,req->body);
       }
     }
     else {
       if ((req->header==NULL) || (strlen(req->header)==0)) {
         template = "GET %s HTTP/1.1\r\nHost: %s\r\nConnection: Close\r\n\r\n";
-        srequest = (char*)malloc(sizeof(char)*((int)strlen(template)+(int)strlen(req->path)+(int)strlen(req->host)-3));
+        srequest = (char*)malloc(sizeof(char)*((int)strlen(template)+(int)strlen(req->path)+(int)strlen(req->host)+1));
         sprintf(srequest,template,req->path,req->host);
       }
       else {
         template = "GET %s HTTP/1.1\r\nHost: %s\r\n%s\r\nConnection: Close\r\n\r\n";
-        srequest = (char*)malloc(sizeof(char)*((int)strlen(template)+(int)strlen(req->path)+(int)strlen(req->host)+(int)strlen(req->header)-5));
+        srequest = (char*)malloc(sizeof(char)*((int)strlen(template)+(int)strlen(req->path)+(int)strlen(req->host)+(int)strlen(req->header)+1));
         sprintf(srequest,template,req->path,req->host,req->header);
       }
     }
@@ -218,10 +218,10 @@ void* send_request_thread(void* data) {
    send_request(req, &http_response_code, (char*)http_body);
 
  // if (buffer!=NULL) free(buffer);
-  if (req->host!=NULL) free(req->host);
-  if (req->path!=NULL) free(req->path);
-  if (req->header!=NULL) free(req->header);
-  if (req->body!=NULL) free(req->body);
+//  if (req->host!=NULL) free(req->host);
+ // if (req->path!=NULL) free(req->path);
+  //if (req->header!=NULL) free(req->header);
+  //if (req->body!=NULL) free(req->body);
   if (req!=NULL) free(req);
 
   pthread_exit(NULL);
@@ -299,9 +299,9 @@ int vmod_send_get_request(struct sess *sp, const char* host, const char* port, c
   }
 
   struct request *req = (struct request*)malloc(sizeof(struct request));  
-  req->host = strdup(host);
-  req->path = strdup(path);
-  req->header = strdup(header);
+  req->host = (char*)host;
+  req->path = (char*)path;
+  req->header = (char*)header;
   req->port = porti;
   req->http_verb = HTTP_GET;
   req->body = NULL;
@@ -312,9 +312,9 @@ int vmod_send_get_request(struct sess *sp, const char* host, const char* port, c
 
   send_request(req, &http_response_code, (char*)&http_body);
 
- if (req->host!=NULL) free(req->host);
-  if (req->path!=NULL) free(req->path);
-  if (req->header!=NULL) free(req->header);
+// if (req->host!=NULL) free(req->host);
+ // if (req->path!=NULL) free(req->path);
+  //if (req->header!=NULL) free(req->header);
   if (req!=NULL) free(req);
  //if (http_body!=NULL) free(http_body);
 
@@ -332,9 +332,9 @@ const char* vmod_send_get_request_body(struct sess *sp, const char* host, const 
   }
 
   struct request *req = (struct request*)malloc(sizeof(struct request));  
-  req->host = strdup(host);
-  req->path = strdup(path);
-  req->header = strdup(header);
+  req->host = (char*)host;
+  req->path = (char*)path;
+  req->header = (char*)header;
   req->port = porti;
   req->http_verb = HTTP_GET;
   req->body = NULL;
@@ -350,10 +350,10 @@ const char* vmod_send_get_request_body(struct sess *sp, const char* host, const 
 
   send_request(req, &http_response_code, (char*)&http_body);
 
-  if (req->host!=NULL) free(req->host);
-  if (req->path!=NULL) free(req->path);
-  if (req->header!=NULL) free(req->header);
-  if (req->body!=NULL) free(req->body);
+  //if (req->host!=NULL) free(req->host);
+ // if (req->path!=NULL) free(req->path);
+  //if (req->header!=NULL) free(req->header);
+  //if (req->body!=NULL) free(req->body);
   if (req!=NULL) free(req);
 
  	v = snprintf(p, u, "%s", http_body);
@@ -382,8 +382,8 @@ int vmod_send_get_request_threaded(struct sess *sp, const char* host, const char
   }
 
   struct request *req = (struct request*)malloc(sizeof(struct request));  
-  req->host = strdup(host);
-  req->path = strdup(path);
+  req->host = (char*)host;
+  req->path = (char*)path;
   if (header!=NULL) req->header = strdup(header);
   req->port = porti; 
   req->http_verb = HTTP_GET;
@@ -406,9 +406,9 @@ int vmod_send_post_request_threaded(struct sess *sp, const char* host, const cha
   }
 
   struct request *req = (struct request*)malloc(sizeof(struct request));  
-  req->host = strdup(host);
-  req->path = strdup(path);
-  req->body = strdup(body);
+  req->host = (char*)host;
+  req->path = (char*)path;
+  req->body = (char*)body;
   if (header!=NULL) req->header = strdup(header);
   req->port = porti;
   req->http_verb = HTTP_POST;
