@@ -17,6 +17,7 @@
 
 #define HTTP_GET 1
 #define HTTP_POST 2
+#define TAILLE 16*1024
 
 char *url_encode(const char *str);
 
@@ -117,12 +118,12 @@ char* get_string_between_delimiters(const char* string, const char* left, const 
 }
 
 
-char* send_request(struct request* req, int* http_response_code) {
+int send_request(struct request* req, int* http_response_code, char * buffer) {
 
   struct sockaddr_in *remote;
   int sock;
-  int buffer_size = 16*1024;
-  char* buffer = (char*)calloc(buffer_size,sizeof(char));
+  int buffer_size = TAILLE;
+//  char* buffer = (char*)calloc(buffer_size,sizeof(char));
   int tmpres;
 
   char* ip = get_ip(req->host);
@@ -203,7 +204,7 @@ char* send_request(struct request* req, int* http_response_code) {
     free(ip);
   }
 
-  return buffer;
+  return 0;
   
 }
 
@@ -211,10 +212,12 @@ void* send_request_thread(void* data) {
 
   struct request *req = (struct request *)data; 
   int http_response_code;
+ char http_body[TAILLE];
 
-  char* buffer = send_request(req, &http_response_code);
 
-  if (buffer!=NULL) free(buffer);
+   send_request(req, &http_response_code, (char*)http_body);
+
+ // if (buffer!=NULL) free(buffer);
   if (req->host!=NULL) free(req->host);
   if (req->path!=NULL) free(req->path);
   if (req->header!=NULL) free(req->header);
@@ -300,14 +303,18 @@ int vmod_send_get_request(struct sess *sp, const char* host, const char* port, c
   req->body = NULL;
 
   int http_response_code;
-  char* http_body = send_request(req,&http_response_code);
- 
-  if (req->host!=NULL) free(req->host);
+
+  char http_body[TAILLE];
+
+  send_request(req, &http_response_code, (char*)&http_body);
+
+ if (req->host!=NULL) free(req->host);
   if (req->path!=NULL) free(req->path);
   if (req->header!=NULL) free(req->header);
   if (req!=NULL) free(req);
-  if (http_body!=NULL) free(http_body);
+ //if (http_body!=NULL) free(http_body);
 
+  
   return http_response_code;
 
 }
@@ -329,15 +336,32 @@ const char* vmod_send_get_request_body(struct sess *sp, const char* host, const 
   req->body = NULL;
 
   int http_response_code;
-  char* http_body = send_request(req, &http_response_code);
+  char http_body[TAILLE];
+
+  char *p;
+  unsigned u, v;
+
+  u = WS_Reserve(sp->wrk->ws, 0); /* Reserve some work space */
+  p = sp->wrk->ws->f;		/* Front of workspace area */
+
+  send_request(req, &http_response_code, (char*)&http_body);
 
   if (req->host!=NULL) free(req->host);
   if (req->path!=NULL) free(req->path);
   if (req->header!=NULL) free(req->header);
   if (req->body!=NULL) free(req->body);
   if (req!=NULL) free(req);
-  
-  return http_body;
+
+ 	v = snprintf(p, u, "%s", http_body);
+	v++;
+	if (v > u) {
+		/* No space, reset and leave */
+		WS_Release(sp->wrk->ws, 0);
+		return (NULL);
+	}
+	/* Update work space with what we've used */
+	WS_Release(sp->wrk->ws, v);
+	return (p);
 
 }
 
@@ -345,6 +369,7 @@ const char* vmod_send_get_request_body(struct sess *sp, const char* host, const 
 int vmod_send_get_request_threaded(struct sess *sp, const char* host, const char* port, const char* path, const char* header) {
 
   pthread_t tid;
+
  
   int porti = 80;
   if (port!=NULL && strcmp(port,"(null)")!=0) { 
