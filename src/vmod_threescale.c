@@ -178,7 +178,7 @@ int send_request(struct request* req, int* http_response_code, char * buffer) {
 
       if(connect(sock, (struct sockaddr *)remote, sizeof(struct sockaddr)) >= 0) {
         int sent = 0;
-        while(sent < (int)strlen(srequest+1)) {
+        while(sent < (int)strlen(srequest)+1) {
           tmpres = send(sock, srequest+sent, (int)strlen(srequest)-sent, 0);
           sent += tmpres;
         }
