@@ -35,6 +35,14 @@ int init_function(struct vmod_priv *priv, const struct VCL_conf *conf) {
   return (0);
 }
 
+// super stupid way to log but sometime useful to avoid varnish logging
+// do NOT ever use this function in production!
+void simple_log(char* message) {
+  FILE *fd = fopen("/tmp/simple_log_varnish.log","a");
+  fprintf(fd,"%s\n",message);
+  fclose(fd);
+}
+
 
 char* get_ip(const char *host, char * ipstr) {
 
@@ -127,7 +135,7 @@ int send_request(struct request* req, int* http_response_code, char * buffer) {
   char ip[16];
   memset( (char*) ip, 0, 16);
   
-   get_ip(req->host, (char*) ip);
+  get_ip(req->host, (char*) ip);
   
   if (ip==NULL) {
     perror("libvmod_3scale: could not resolve the ip");
@@ -167,7 +175,7 @@ int send_request(struct request* req, int* http_response_code, char * buffer) {
         sprintf(srequest,template,req->path,req->host,req->header);
       }
     }
-    
+        
     if((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) >= 0) {
 
       remote = (struct sockaddr_in *)malloc(sizeof(struct sockaddr_in *));
@@ -178,11 +186,12 @@ int send_request(struct request* req, int* http_response_code, char * buffer) {
 
       if(connect(sock, (struct sockaddr *)remote, sizeof(struct sockaddr)) >= 0) {
         int sent = 0;
-        while(sent < (int)strlen(srequest)+1) {
+                
+        while(sent < (int)strlen(srequest)) {
           tmpres = send(sock, srequest+sent, (int)strlen(srequest)-sent, 0);
           sent += tmpres;
         }
-
+        
         // FIXME: this will fail for long response pages > 16KB (buffer_size)
         recv(sock, buffer, buffer_size, 0);
 
@@ -202,12 +211,9 @@ int send_request(struct request* req, int* http_response_code, char * buffer) {
     }
 	
 	 free(srequest); 
-
-
   }
 
   return 0;
-  
 }
 
 void* send_request_thread(void* data) {
@@ -216,18 +222,16 @@ void* send_request_thread(void* data) {
   int http_response_code;
   char http_body[TAILLE];
 
+  send_request(req, &http_response_code, (char*)http_body);
 
-   send_request(req, &http_response_code, (char*)http_body);
-
- // if (buffer!=NULL) free(buffer);
-//  if (req->host!=NULL) free(req->host);
- // if (req->path!=NULL) free(req->path);
+  // if (buffer!=NULL) free(buffer);
+  //  if (req->host!=NULL) free(req->host);
+  // if (req->path!=NULL) free(req->path);
   //if (req->header!=NULL) free(req->header);
   //if (req->body!=NULL) free(req->body);
   if (req!=NULL) free(req);
 
   pthread_exit(NULL);
-
 }
 
 // ****************************************************************************
@@ -391,7 +395,6 @@ const char* vmod_send_get_request_body(struct sess *sp, const char* host, const 
 int vmod_send_get_request_threaded(struct sess *sp, const char* host, const char* port, const char* path, const char* header) {
 
   pthread_t tid;
-
  
   int porti = 80;
   if (port!=NULL && strcmp(port,"(null)")!=0) { 
