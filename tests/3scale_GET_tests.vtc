@@ -1,0 +1,127 @@
+varnishtest "Test 3scale mod"
+
+# Test that 3scale module overides headers and always adds Content-Type: www-urlencoded
+
+
+# servers 1x mimics 3scale backend
+
+server s11 {
+
+	# Test 1 : Set Content-type: application/json
+	rxreq 
+	expect req.http.content-type == "application/json"
+	txresp -hdr "back: threescale" -bodylen 4
+} -start
+
+server s12 {
+
+	# Test 2 : Set null header	
+	rxreq 
+	expect req.http.content-type == <undef>
+	txresp -hdr "back: threescale" -bodylen 4
+} -start
+
+server s13 {
+
+	# Test 3 : Set Content-type: nil
+	rxreq 
+	expect req.http.content-type == ""
+	txresp -hdr "back: threescale" -bodylen 4
+} -start
+
+server s14 {
+
+	# Test 4 : Set irrelevant header
+	rxreq 
+	expect req.http.content-type == <undef>
+	expect req.http.x-sample-header == "Some-Header"
+	txresp -hdr "back: threescale" -bodylen 4
+} -start
+
+
+
+# server 1 is our backend
+
+server s1 {
+	rxreq 
+	txresp -hdr "back: ufe" -bodylen 4
+
+	rxreq 
+	txresp -hdr "back: ufe" -bodylen 4
+
+	rxreq 
+	txresp -hdr "back: ufe" -bodylen 4
+
+	rxreq 
+	txresp -hdr "back: ufe" -bodylen 4
+
+} -start
+
+
+
+varnish v1 -vcl {
+       backend b1 {
+               .host = "${s1_addr}";
+               .port = "${s1_port}";
+      }
+
+	import std from "/home/kiidev/rpmbuild/BUILD/varnish-3.0.4/lib/libvmod_std/.libs/libvmod_std.so" ;
+	import threescale from "/home/kiidev/vmod/lib/libvmod_threescale.so" ;
+
+	sub vcl_deliver {
+
+		# response is irrelevant. the aim is to check the headers at backend. 
+		# but we have to use this as an expression or VCL wont compile.
+
+
+		# Test 1 : Set Content-type: application/json
+		if (req.http.test == "1"){
+				set resp.http.res = threescale.send_get_request("${s11_addr}","${s11_port}","/test/1","Content-Type: application/json");
+		}
+
+		# Test 2 : Set null header
+		if (req.http.test == "2"){
+				set resp.http.res = threescale.send_get_request("${s12_addr}","${s12_port}","/test/2","");
+		}
+
+		# Test 3 : Set Content-type: nil
+		if (req.http.test == "3"){
+				set resp.http.res = threescale.send_get_request("${s13_addr}","${s13_port}","/test/3","Content-Type: ");
+		}
+
+		# Test 4 : Set irrelevant header
+		if (req.http.test == "4"){
+				set resp.http.res = threescale.send_get_request("${s14_addr}","${s14_port}","/test/4","X-Sample-Header: Some-Header");
+		}
+
+		std.log("VCL initiated log");
+		std.syslog(8 + 7, "Somebody runs varnishtest");
+	}
+
+
+} -start
+
+client c1 {
+	txreq -url "/test" -hdr "test: 1"
+	rxresp
+	expect resp.status == 200
+	expect resp.http.content-length == "4"
+
+
+	txreq -url "/test" -hdr "test: 2"
+	rxresp
+	expect resp.status == 200
+	expect resp.http.content-length == "4"
+
+	txreq -url "/test" -hdr "test: 3"
+	rxresp
+	expect resp.status == 200
+	expect resp.http.content-length == "4"
+
+	txreq -url "/test" -hdr "test: 4"
+	rxresp
+	expect resp.status == 200
+	expect resp.http.content-length == "4"
+
+} -run
+
