@@ -158,7 +158,15 @@ int send_request(struct request* req, int* http_response_code, char * buffer) {
         sprintf(srequest,template,req->path,req->host,body_len,req->body);
       }
       else {
-        template = "POST %s HTTP/1.1\r\nHost: %s\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: %d\r\n%s\r\nConnection: Close\r\n\r\n%s";
+	// check if content-type already defined in header
+	const char needle[13] = "Content-Type:";
+	char *ret;
+	ret = strstr(req->header, needle);
+	if(ret == NULL) {
+	  template = "POST %s HTTP/1.1\r\nHost: %s\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: %d\r\n%s\r\nConnection: Close\r\n\r\n%s";
+	} else {
+	  template = "POST %s HTTP/1.1\r\nHost: %s\r\nContent-Length: %d\r\n%s\r\nConnection: Close\r\n\r\n%s";
+	}
         srequest = (char*)malloc(sizeof(char)*((int)strlen(template)+(int)strlen(req->path)+(int)strlen(req->host)+(int)strlen(req->header)+body_len+body_len_len+1));
         sprintf(srequest,template,req->path,req->host,body_len,req->header,req->body);
       }
