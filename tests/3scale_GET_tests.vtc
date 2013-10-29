@@ -10,6 +10,14 @@ server s11 {
 	# Test 1 : Set Content-type: application/json
 	rxreq 
 	expect req.http.content-type == "application/json"
+
+	expect req.http.content-length == <undef>
+	expect req.http.connection == "Close"
+	expect req.request == "GET"
+	expect req.http.host == "127.0.0.1"
+	expect req.url == "/test/1"
+	expect req.proto == "HTTP/1.1"
+
 	txresp -hdr "back: threescale" -bodylen 4
 } -start
 
@@ -18,6 +26,14 @@ server s12 {
 	# Test 2 : Set null header	
 	rxreq 
 	expect req.http.content-type == <undef>
+
+	expect req.http.content-length == <undef>
+	expect req.http.connection == "Close"
+	expect req.request == "GET"
+	expect req.http.host == "127.0.0.1"
+	expect req.url == "/test/2"
+	expect req.proto == "HTTP/1.1"
+
 	txresp -hdr "back: threescale" -bodylen 4
 } -start
 
@@ -26,6 +42,14 @@ server s13 {
 	# Test 3 : Set Content-type: nil
 	rxreq 
 	expect req.http.content-type == ""
+
+	expect req.http.content-length == <undef>
+	expect req.http.connection == "Close"
+	expect req.request == "GET"
+	expect req.http.host == "127.0.0.1"
+	expect req.url == "/test/3"
+	expect req.proto == "HTTP/1.1"
+
 	txresp -hdr "back: threescale" -bodylen 4
 } -start
 
@@ -35,6 +59,14 @@ server s14 {
 	rxreq 
 	expect req.http.content-type == <undef>
 	expect req.http.x-sample-header == "Some-Header"
+
+	expect req.http.content-length == <undef>
+	expect req.http.connection == "Close"
+	expect req.request == "GET"
+	expect req.http.host == "127.0.0.1"
+	expect req.url == "/test/4"
+	expect req.proto == "HTTP/1.1"
+
 	txresp -hdr "back: threescale" -bodylen 4
 } -start
 
