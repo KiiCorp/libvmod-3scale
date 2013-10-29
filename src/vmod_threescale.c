@@ -107,7 +107,7 @@ int get_http_response_code(const char* buffer, int buffer_len) {
 }
 
 char* get_string_between_delimiters(const char* string, const char* left, const char* right, char * out) {
-  const char* beginning = strstr(string, left);
+  const char* beginning = strcasestr(string, left);
   if (beginning == NULL) return NULL;
 		
   const char* end = strstr(string, right);
@@ -159,7 +159,7 @@ int send_request(struct request* req, int* http_response_code, char * buffer) {
       }
       else {
 	// check if content-type already defined in header
-	const char needle[13] = "Content-Type:";
+	const char* needle = "Content-Type:";
 	char *ret;
 	ret = strstr(req->header, needle);
 	if(ret == NULL) {
